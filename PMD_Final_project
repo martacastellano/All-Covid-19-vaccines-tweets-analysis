@@ -1,0 +1,1610 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# # PROCESADO MASIVO DE DATOS
+# ## All COVID-19 Vaccines Tweets
+# ### GRUPO 7 | Paula Sánchez Tirado, María Mercedes López-Colina Gil, Gloria Sendra García, Marta Castellano Torres, Silvia Martín Galán
+
+# Nuestro proyecto consiste en un análisis descriptivo de los tweets relacionados con la vacunación contra el COVID, mediante el procesamiento de estos datos almacenados en la base de datos anterior. 
+# 
+# Además, hemos hecho un análisis de sentimientos sobre estos para poder evaluar la opinión a grandes rasgos de la poblacion sobre este tema. 
+
+# In[1]:
+
+
+#Importamos los módulos necesarios. 
+from textblob import TextBlob
+import pandas as pd
+import numpy as np
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+
+# In[2]:
+
+
+#from google.colab import drive 
+#drive.mount('/drive', force_remount=True)
+
+
+# In[3]:
+
+
+db = pd.read_csv('vaccination_all_tweets.csv')
+
+
+# In[4]:
+
+
+db.shape
+
+
+# In[5]:
+
+
+db.head()
+
+
+# In[6]:
+
+
+columna= np.ones(db.shape[0]) #Añadimos una columna de unos para contabilizar los tweets
+db['Tweet']=columna
+
+
+# ## Análisis de sentimientos
+
+# TextBlob es una librería Python para procesar datos de texto. Permite realizar tareas comunes de procesamiento de lenguaje natural. 
+# 
+# El análisis de sentimiento se refiere al uso de procesamiento de lenguaje natural, análisis de texto y lingüistica computacional para identificar y extraer información subjetiva. 
+# 
+# Con el análisis de los tweets  se puede lograr una aproximación de la evaluación emocional que tiene este tema de la vacunación en algún momento en la red social mencionada. 
+# 
+# El siguiente código nos permite este análisis de sentimientos y graficar sus resultados para extraer conclusiones. 
+
+# In[7]:
+
+
+popularity_list = []
+for tweet in db["text"]: #Analizamos el texto de cada tweet
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment 
+    popularity = analysis.polarity #La polaridad es el sentimiento mismo, que va de -1 a +1.
+    popularity_list.append(popularity)
+
+
+# In[8]:
+
+
+# Incluimos en el DataFrame el valor de sentimiento asociado a cada tweet
+db['Sentiment_tweet']=popularity_list
+db
+
+
+# In[9]:
+
+
+media_sentimientos = np.mean(popularity_list)
+if media_sentimientos>0:  #Polaridad 1 -> Sentimiento positivo
+    print("En general, hemos encontrado más tweets con una buena concepción sobre las vacunas.")
+else: #Polaridad 0 -> Sentimiento negativo
+    print("En general, hemos encontrado más tweets con una mala concepción sobre las vacunas.")
+
+
+# In[10]:
+
+
+db.shape[0]
+
+
+# In[11]:
+
+
+# Creamos un nuevo DataFrame donde recojamos los Tweets buenos, malos y neutros con su correspondiente valoración
+df_buenos=pd.DataFrame()
+df_malos=pd.DataFrame()
+df_neutros=pd.DataFrame()
+
+# Creamos una lista para cada grupo de tweets y su sentimiento
+sentimientos_buenos = []
+sentimientos_malos = []
+sentimientos_neutros = []
+tweets_buenos = []
+tweets_malos = []
+tweets_neutros = []
+
+for i in range(db.shape[0]):
+    if db['Sentiment_tweet'][i]>0: # Opinión positiva
+        tweets_buenos.append(db['text'][i])
+        sentimientos_buenos.append(db['Sentiment_tweet'][i])
+    elif db['Sentiment_tweet'][i]<0: # Opinión negativa
+        tweets_malos.append(db['text'][i])
+        sentimientos_malos.append(db['Sentiment_tweet'][i])
+    elif db['Sentiment_tweet'][i]==0: # Opinión neutra
+        tweets_neutros.append(db['text'][i])
+        sentimientos_neutros.append(db['Sentiment_tweet'][i])
+
+
+# In[12]:
+
+
+# Completamos los dataframes
+df_buenos['text']=tweets_buenos
+df_buenos['Sentiment_tweet']=sentimientos_buenos
+df_malos['text']=tweets_malos
+df_malos['Sentiment_tweet']=sentimientos_malos
+df_neutros['text']=tweets_neutros
+df_neutros['Sentiment_tweet']=sentimientos_neutros
+
+
+# In[13]:
+
+
+print('Del total de la base de datos,',db.shape[0],'tweets,', len(sentimientos_buenos),'de ellos tienen una opinión positiva',len(sentimientos_malos),'tienen opinión negativa, y el resto,',len(sentimientos_neutros), ', tienen opinión neutra, ni a favor ni en contra.')
+
+
+# In[14]:
+
+
+x_values = ['Positivos','Neutros','Negativos']
+y_values = [len(sentimientos_buenos),len(sentimientos_neutros),len(sentimientos_malos)]
+plt.bar(x_values, y_values, color=['green','blue','red'])
+plt.title('Opinión de los tweets sobre la vacunación', fontsize=15)
+plt.xlabel('Sentimiento',fontsize=15)
+plt.ylabel('Número de tweets',fontsize=15)
+plt.show()
+
+
+# In[15]:
+
+
+plt.figure()
+plt.title('Distribución de los sentimientos de los tweets')
+plt.hist(df_buenos['Sentiment_tweet'], color='g')
+plt.xlim(-1,1)
+plt.hist(df_neutros['Sentiment_tweet'], color='b')
+plt.xlim(-1,1)
+plt.hist(df_malos['Sentiment_tweet'], color='r')
+plt.xlim(-1,1)
+plt.legend(('Tweets positivos', 'Tweets neutros', 'Tweets negativos'))
+plt.show()
+
+
+# In[16]:
+
+
+st = np.array(sentimientos_buenos)
+stm = np.array(sentimientos_malos)
+
+sentb = pd.DataFrame(st, columns=['h'])
+sentm = pd.DataFrame(stm, columns=['m'])
+
+
+# In[17]:
+
+
+plt.figure()
+sentb[['h']].plot.box()
+plt.xlabel('tweets')
+plt.ylabel('Puntuación del sentimiento')
+plt.title('Opiniones de los tweets positivos')
+plt.show
+
+plt.figure()
+
+sentm[['m']].plot.box()
+plt.xlabel('tweets')
+plt.ylabel('Puntuación del sentimiento')
+plt.title('Opiniones de los tweets negativos')
+plt.show()
+
+
+# **Palabras más usadas en general en esta base de datos de tweets.**
+
+# In[18]:
+
+
+text=' '.join(db['text'])
+wordcloud = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=100).generate(text.replace('https://t.co/',''))
+plt.figure(figsize=(10,15))
+plt.imshow(wordcloud, interpolation="bilinear")
+plt.title("Palabras más usadas", fontsize=15)
+plt.show()
+
+
+# **Palabras más usadas en los tweets con sentimientos positivos**
+# 
+# 
+
+# In[19]:
+
+
+text_b=' '.join(df_buenos['text'])
+wordcloud_b = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=70).generate(text_b.replace('https://t.co/',''))
+plt.figure(figsize=(10,15))
+plt.imshow(wordcloud_b, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets positivos", fontsize=15)
+plt.show()
+
+
+# **Palabras más usadas entre los tweets con sentimientos negativos**
+
+# In[20]:
+
+
+text_m=' '.join(df_malos['text'])
+wordcloud_m = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=10).generate(text_m.replace('https://t.co/',''))
+plt.figure(figsize=(10,15))
+plt.imshow(wordcloud_m, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets negativos", fontsize=15)
+plt.show()
+
+
+# **Palabras más usadas entre los tweets con sentimientos neutros**
+
+# In[21]:
+
+
+text_n=' '.join(df_neutros['text'])
+wordcloud_n = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(10,15))
+plt.imshow(wordcloud_n, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets neutros", fontsize=15)
+plt.show()
+
+
+# ## Análisis descriptivo según la opinión de los tweets
+
+# In[22]:
+
+
+idd = np.array(db["id"])
+popularidad = np.array(popularity_list) 
+
+
+# In[23]:
+
+
+sent_good = []
+sent_bad = []
+sent_neutro = []
+for j in range(popularidad.shape[0]):
+    if popularidad[j] < 0:
+        sent_bad.append(idd[j])
+    elif popularidad[j] > 0:
+        sent_good.append(idd[j])
+    elif popularidad[j] == 0:
+        sent_neutro.append(idd[j])
+
+
+# In[24]:
+
+
+list_buenos = []
+list_malos = []
+list_neutros = []
+for t in sent_good:
+    g = db[db["id"]==t]
+    list_buenos.append(g)
+for y in sent_bad:
+    b = db[db["id"]==y]
+    list_malos.append(b)
+for w in sent_neutro:
+    n = db[db["id"]==w]
+    list_neutros.append(n)
+
+
+# In[25]:
+
+
+array_buenos = np.array(list_buenos)
+array_malos = np.array(list_malos)
+array_neutros = np.array(list_neutros)
+
+
+# In[26]:
+
+
+array_buenos.shape
+
+
+# In[27]:
+
+
+array_buenos = array_buenos.reshape(26207, 18)
+array_malos = array_malos.reshape(8628, 18)
+array_neutros = array_neutros.reshape(30253, 18)
+
+
+# In[28]:
+
+
+df_buenos = pd.DataFrame(array_buenos, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+df_malos = pd.DataFrame(array_malos, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+df_neutros = pd.DataFrame(array_neutros, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+
+
+# ### Repercusión de los tweets
+
+# Tras dividir la base de datos según la opinión de cada tweets, analizamos la repercusión de cada conjunto de tweets. Entendemos como repercusión la cantidad de retweets y favoritos que han recibido los tweets, pues serán los que más interés generen. 
+
+# In[29]:
+
+
+print('El máximo de retweets que ha tenido un tweet con valoración positiva es', df_buenos["retweets"].max(), 'mientras que el máximo de un tweet con valoración negativa son',df_malos["retweets"].max())
+
+
+# In[30]:
+
+
+a=df_buenos['retweets'].unique()
+x_values = sorted(a)
+b = df_buenos.groupby(df_buenos['retweets'],sort=True)['Tweet'].sum()
+y_values=list(b)
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.plot(x_values,y_values)
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.plot(x_values,y_values)
+plt.xlim(0,10)
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("0-10 Retweets", fontsize=15);
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.plot(x_values,y_values)
+plt.xlim(10,20)
+plt.ylim(0,50)
+plt.ylabel('Número de tweets con ese valor de rt', fontsize=15)
+plt.title("10-20 Retweets", fontsize=15);
+
+
+# In[31]:
+
+
+df_buenoss = pd.to_datetime(df_buenos['date'])
+df_maloss = pd.to_datetime(df_malos['date'])
+
+
+# In[32]:
+
+
+x_values = df_buenoss.dt.strftime('%B').unique()
+x_values1 = df_maloss.dt.strftime('%B').unique()
+
+y_values = df_buenos.groupby(df_buenoss.dt.strftime('%B'),sort=False)['retweets'].sum()
+y_values1 = df_buenos.groupby(df_buenoss.dt.strftime('%B'),sort=False)['favorites'].sum()
+
+y_values2 = df_buenos.groupby(df_maloss.dt.strftime('%B'),sort=False)['retweets'].sum()
+y_values3 = df_buenos.groupby(df_maloss.dt.strftime('%B'),sort=False)['favorites'].sum()
+
+
+# In[33]:
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values,y=y_values,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de retweets positivos", fontsize=15);
+
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values,y=y_values1,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de favoritos positivos", fontsize=15);
+
+
+# In[34]:
+
+
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values1,y=y_values2,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de retweets negativos", fontsize=15);
+
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values1,y=y_values3,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de favoritos negativos", fontsize=15);
+
+
+# **Vacunas de las que más se habla**
+
+# In[35]:
+
+
+sputnik = db[db["text"].str.contains('SputnikV')]
+pf = db[db["text"].str.contains('Pfizer|BioNTech')]
+sinopharm = db[db["text"].str.contains('Sinopharm')]
+sinovac= db[db["text"].str.contains('Sinovac')]
+moderna = db[db["text"].str.contains('Moderna')]
+astra = db[db["text"].str.contains('AstraZeneca|Oxford')]
+covaxin = db[db["text"].str.contains('Covaxin')]
+
+
+# In[36]:
+
+
+vacunas= [sputnik,pf,sinopharm,sinovac,moderna,astra,covaxin]
+num1=[]
+for i in vacunas:
+    num1.append(i.shape[0])
+
+
+# **Vacunas de las que mejor se hablan**
+
+# In[37]:
+
+
+df_buenos = pd.DataFrame(array_buenos, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+df_malos = pd.DataFrame(array_malos, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+df_neutros = pd.DataFrame(array_neutros, columns=["id", "user_name", "user_location", "user_description", "user_created", "user_followers", "user_friends", "user_favourite", "user_verified", "date", "text", "hashtags", "source", "retweets", "favorites", "is_retweet", "Tweet", "Sentiment_tweet"])
+
+
+# In[38]:
+
+
+#Vacuna que genera más sentimientos positivos
+sputnik_b = df_buenos[df_buenos["text"].str.contains('SputnikV')]
+pf_b = df_buenos[df_buenos["text"].str.contains('Pfizer|BioNTech')]
+sinopharm_b = df_buenos[df_buenos["text"].str.contains('Sinopharm')]
+sinovac_b= df_buenos[df_buenos["text"].str.contains('Sinovac')]
+moderna_b = df_buenos[df_buenos["text"].str.contains('Moderna')]
+astra_b = df_buenos[df_buenos["text"].str.contains('AstraZeneca|Oxford')]
+covaxin_b = df_buenos[df_buenos["text"].str.contains('Covaxin')]
+
+
+# In[39]:
+
+
+vacunas= [sputnik_b,pf_b,sinopharm_b,sinovac_b,moderna_b,astra_b,covaxin_b]
+num=[]
+for i in vacunas:
+    num.append(i.shape[0])
+
+
+# In[40]:
+
+
+#Vacuna que genera más sentimientos negativos
+sputnik_m = df_malos[df_malos["text"].str.contains('SputnikV')]
+pf_m = df_malos[df_malos["text"].str.contains('Pfizer|BioNTech')]
+sinopharm_m = df_malos[df_malos["text"].str.contains('Sinopharm')]
+sinovac_m = df_malos[df_malos["text"].str.contains('Sinovac')]
+moderna_m = df_malos[df_malos["text"].str.contains('Moderna')]
+astra_m = df_malos[df_malos["text"].str.contains('AstraZeneca|Oxford')]
+covaxin_m = df_malos[df_malos["text"].str.contains('Covaxin')]
+
+
+# In[41]:
+
+
+vacunas_m= [sputnik_m,pf_m,sinopharm_m,sinovac_m,moderna_m,astra_m,covaxin_m]
+n=[]
+for p in vacunas_m:
+    n.append(p.shape[0])
+
+
+# In[44]:
+
+
+explode = [0, 0, 0, 0, 0, 0, 0]  # Destacar algunos
+vacunas2= ['sputnik','pf','sinopharm','sinovac','moderna','astra','covaxin']
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.pie(num1, labels=vacunas2, explode=explode,
+        autopct='%1.1f%%', shadow=True, startangle=90)
+plt.title('Porcentaje de tweets sobre cada vacuna')
+plt.show()
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.pie(num, labels=vacunas2, explode=explode,
+        autopct='%1.1f%%', shadow=True, startangle=90)
+plt.title('Vacunas de las que mejor se habla')
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+plt.pie(n, labels=vacunas2, explode=explode,
+        autopct='%1.1f%%', shadow=True, startangle=90)
+plt.title('Vacunas de las que peor se habla')
+
+
+# ### Evolución temporal de los tweets sobre la vacunación
+
+# In[45]:
+
+
+db['date'] = pd.to_datetime(db['date'])
+x_values = db['date'].dt.strftime('%B').unique()
+y_values = db.groupby(db['date'].dt.strftime('%B'), sort=False)['Tweet'].sum()
+
+
+# In[46]:
+
+
+data=pd.read_csv('country_vaccinations.csv', parse_dates=['date'])
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(data=data,x="date",y="daily_vaccinations",marker='s', markersize = 12);
+plt.xticks(rotation=90);
+plt.ylabel('Vacunas diarias', fontsize=15)
+plt.ylim(0,250000)
+plt.title("Progreso de la vacunación en el mundo", fontsize=15);
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values,y=y_values,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de tweets", fontsize=15);
+
+plt.title('COMPARATIVA ENTRE % DE POBLACIÓN VACUNADA Y TWEETS SOBRE ELLA')
+
+
+# ### Evolución temporal de los tweets positivos sobre la vacunación
+
+# In[47]:
+
+
+df_buenos['date'] = pd.to_datetime(df_buenos['date'])
+x_buenos = df_buenos['date'].dt.strftime('%B').unique()
+y_buenos = df_buenos.groupby(df_buenos['date'].dt.strftime('%B'), sort=False)['Tweet'].sum()
+
+
+# In[149]:
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_buenos,y=y_buenos,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de tweets positivos", fontsize=15);
+
+
+# ### Evolución temporal de los tweets negativos sobre la vacunación
+
+# In[48]:
+
+
+df_malos['date'] = pd.to_datetime(df_malos['date'])
+x_malos = df_malos['date'].dt.strftime('%B').unique()
+y_malos = df_malos.groupby(df_malos['date'].dt.strftime('%B'), sort=False)['Tweet'].sum()
+
+
+# In[150]:
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_malos,y=y_malos,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de tweets negativos", fontsize=15);
+
+
+# In[49]:
+
+
+plt.figure()
+
+plt.bar(x_values, y_values)
+plt.title('Evolución temporal de los tweets sobre la vacunación')
+
+plt.figure()
+
+plt.bar(x_buenos, y_buenos)
+plt.title('Evolución temporal de los tweets positivos sobre la vacunación')
+
+plt.figure()
+plt.bar(x_malos, y_malos)
+plt.title('Evolución temporal de los tweets negativos sobre la vacunación')
+
+
+# ### Usuarios de twitter
+
+# In[50]:
+
+
+print('El número total de usuarios diferentes es:',db['user_name'].nunique())
+
+
+# In[51]:
+
+
+import seaborn as sns
+def plot_count(feature, title, df, size=1, ordered=True):
+    f, ax = plt.subplots(1,1, figsize=(4*size,4))
+    total = float(len(df))
+    if ordered:
+        g = sns.countplot(df[feature], order = df[feature].value_counts().index[:20], palette='Set3')
+    else:
+        g = sns.countplot(df[feature], palette='Set3')
+    g.set_title("Number and percentage of {}".format(title))
+    if(size > 2):
+        plt.xticks(rotation=90, size=8)
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x()+p.get_width()/2.,
+                height,
+                '{:1.2f}%'.format(100*height/total),
+                ha="center") 
+    plt.show() 
+
+
+# In[52]:
+
+
+plot_count("user_name", "User name", db,4)
+
+
+# In[53]:
+
+
+Workout_Solutions = db[db['user_name'] == 'Workout Solutions']
+
+
+# In[54]:
+
+
+Workout_Solutions['user_followers']
+
+
+# In[55]:
+
+
+Workout_Solutions['user_location'].value_counts()
+
+
+# In[56]:
+
+
+Workout_Solutions['user_description'].value_counts()
+
+
+# In[57]:
+
+
+Workout_Solutions['user_verified'].value_counts()
+
+
+# In[58]:
+
+
+Workout_Solutions['user_created'].value_counts()
+
+
+# El usuario con más tweets se localiza en Toronto, Canada. Por su biografía, podemos saber que se trata de una consultora de salud y aptitud física, pero sin ser un usuario verificado. La cuenta fue creada en noviembre de 2010 y cuenta con alrededor de 1200 seguidores.
+
+# ## FILTRADO DE TWEETS POR PAISES MÁS RELEVANTES
+
+# Realizamos el mismo proceso anterior pero ahora estudiamos los tweets de cada pais por separado. 
+# 
+# Vamos a analizar los tweets que se escriben en cada pais para tener un análisis descriptivo del interés de los tweeteros de cada pais por la vacunación, así como el sentimiento general hacia ella. 
+
+# In[59]:
+
+
+columna= np.ones(db.shape[0]) #Añadimos una columna de unos para contabilizar los tweets
+db['Tweet']=columna 
+
+
+# In[60]:
+
+
+country_df = pd.read_csv("wikipedia-iso-country-codes.csv")
+country_df.columns = ["country", "alpha2", "alpha3", "numeric", "iso"]
+country_df.head()
+
+
+# In[61]:
+
+
+db['country'] = db['user_location']
+
+
+# In[62]:
+
+
+tweets_df = db.merge(country_df, on="country")
+tw_add_df = tweets_df.groupby(["country", "iso", "alpha3"])['text'].count().reset_index()
+tw_add_df.columns = ["country", "iso", "alpha3", "tweets"]
+
+
+# In[63]:
+
+
+import plotly.express as px
+
+def plot_map(dd_df, title):
+    hover_text = []
+    for index, row in dd_df.iterrows():
+        hover_text.append((f"country: {row['country']}<br>tweets: {row['tweets']}                          <br>country code: {row['iso']}<br>country alpha3: {row['alpha3']}"))
+    dd_df['hover_text'] = hover_text
+
+    fig = px.choropleth(dd_df, 
+                        locations="alpha3",
+                        hover_name='hover_text',
+                        color="tweets",
+                        projection="natural earth",
+                        color_continuous_scale=px.colors.sequential.Plasma,
+                        width=900, height=700)
+    fig.update_geos(   
+        showcoastlines=True, coastlinecolor="DarkBlue",
+        showland=True, landcolor="LightGrey",
+        showocean=True, oceancolor="LightBlue",
+        showlakes=True, lakecolor="Blue",
+        showrivers=True, rivercolor="Blue",
+        showcountries=True, countrycolor="DarkBlue"
+    )
+    fig.update_layout(title = title, geo_scope="world")
+    fig.show()  
+
+
+# **Primero vemos que paises tienen más tweets**
+
+# In[64]:
+
+
+plot_map(tw_add_df, "Tweets por país (donde el país está especificado)")
+
+
+# Podemos observar en el mapa que los países con mayor número de tweets son India y EE.UU representados por colores distintos indicando una diferencia significativa respecto al resto de países. Por eso, procedemos a estudiar estos, ya que son los que más información nos puedes ofrecer.
+
+# In[65]:
+
+
+#Eliminamos los tweets sin localización
+df_buenos.drop(df_buenos[df_buenos.user_location.isnull()].index, inplace = True)
+df_malos.drop(df_malos[df_malos.user_location.isnull()].index, inplace = True)
+db.drop(db[db.user_location.isnull()].index, inplace = True)
+
+
+# In[66]:
+
+
+india_buenos = df_buenos[df_buenos["user_location"].str.contains('India')]
+india_malos = df_malos[df_malos["user_location"].str.contains('India')]
+print("En India se han escrito", len(india_buenos), "tweets a favor de las vacunas y", len(india_malos), "tweets en contra de las vacunas")
+
+
+# In[67]:
+
+
+usa_buenos = df_buenos[df_buenos["user_location"].str.contains('USA')]
+usa_malos = df_malos[df_malos["user_location"].str.contains('USA')]
+print("En EE.UU se han escrito", len(usa_buenos), "tweets a favor de las vacunas y", len(usa_malos), "tweets en contra de las vacunas")
+
+
+# In[68]:
+
+
+db.drop(db[db.user_location.isnull()].index, inplace = True) #Eliminamos los tweets sin localización
+columna= np.ones(db.shape[0]) #Añadimos una columna de unos para contabilizar los tweets
+db['Tweet']=columna 
+
+
+# **EMPEZAMOS POR INDIA.**
+
+# In[69]:
+
+
+india=db[db['user_location'].str.contains( 'India')] #Creamos una sub-base que solo incluyan los tweets de India
+
+
+# In[70]:
+
+
+india.sort_values(["date"]) #Ordenamos por orden cronológico
+
+
+# In[71]:
+
+
+india['date'] = pd.to_datetime(india['date']) #Formato fecha
+
+
+# Vemos la cantidad de tweets por meses, para hacernos una idea del interés de la población por la vacunación. 
+
+# In[72]:
+
+
+x_values = india['date'].dt.strftime('%B').unique()
+y_values = india.groupby(india['date'].dt.strftime('%B'),sort=False)['Tweet'].sum()
+plt.bar(x_values, y_values,color=['green','green','green','red','red'])
+plt.xlabel('Meses',fontsize=15)
+plt.ylabel('Número de Tweets',fontsize=15)
+plt.title('Evolución temporal de los tweets sobre la vacunación',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[73]:
+
+
+data=pd.read_csv('country_vaccinations.csv', parse_dates=['date'])
+
+
+# In[74]:
+
+
+df_I = data[data["country"] == 'India'].copy()
+df_I.drop(['people_vaccinated'], axis = 1, inplace = True)
+
+df_EEUU = data[data["country"] == 'United States'].copy()
+df_EEUU.drop(['people_vaccinated'], axis = 1, inplace = True)
+
+
+# In[75]:
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+get_ipython().run_line_magic('matplotlib', 'inline')
+
+
+# In[76]:
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(data=df_I,x="date",y="daily_vaccinations",marker='s', markersize = 12);
+plt.xticks(rotation=90);
+plt.ylabel('Vacunas diarias por millón de habitantes', fontsize=15)
+plt.title("Progreso de la vacunación en India", fontsize=15);
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values,y=y_values,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de tweets", fontsize=15);
+
+plt.title('COMPARATIVA ENTRE % DE POBLACIÓN VACUNADA Y TWEETS SOBRE ELLA')
+
+
+# Comparando la gráfica del progreso de vacunación con el balance de los tweets por meses, podemos llegar a pensar que tal vez exista una relación entre la cantidad de población que ha sido vacunada en un mes con el número de tweets que se han escrito en este. A partir de marzo hay un progreso notable de vacunación que corresponde con la subida de número de tweets.
+
+# Ahora analizamos de qué vacunas se habla más, es decir, cuales generan mayor interés entre la población.
+
+# In[77]:
+
+
+sputnik_i = india[india["text"].str.contains('SputnikV')]
+pf_i = india[india["text"].str.contains('Pfizer|BioNTech')]
+sinopharm_i = india[india["text"].str.contains('Sinopharm')]
+sinovac_i= india[india["text"].str.contains('Sinovac')]
+moderna_i = india[india["text"].str.contains('Moderna')]
+astra_i = india[india["text"].str.contains('AstraZeneca|Oxford')]
+covaxin_i = india[india["text"].str.contains('Covaxin')]
+
+
+# In[78]:
+
+
+vacunas_i= [sputnik_i,pf_i,sinopharm_i,sinovac_i,moderna_i,astra_i,covaxin_i]
+
+
+# In[79]:
+
+
+num=[]
+for i in vacunas_i:
+    num.append(i.shape[0])
+
+
+# In[80]:
+
+
+vacunas2= ['Sputnik','Pfizer','Sinopharm','Sinovac','Moderna','AstraZeneca','Covaxin']
+plt.pie(num, labels=vacunas2,
+        autopct='%1.1f%%', shadow=True, startangle=90)
+plt.title('Porcentaje de tweets sobre cada vacuna en India', fontsize=15)
+plt.rcParams["figure.figsize"] = (15,15)
+plt.show()
+
+
+# In[81]:
+
+
+#Analisis de sentimientos de los tweets con más repercusión
+popularity_list_covaxin = []
+for tweet in covaxin_i["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_covaxin.append(popularity)
+
+
+# In[82]:
+
+
+media_sentimientos = np.mean(popularity_list_covaxin)
+if media_sentimientos>0:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una buena concepción sobre las vacunas")
+else:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una mala concepción sobre las vacunas")
+
+
+# In[83]:
+
+
+sentimientos_buenos_covaxin = []
+sentimientos_malos_covaxin = []
+sentimientos_neutros_covaxin = []
+for i in popularity_list_covaxin:
+    if i>0:
+        sentimientos_buenos_covaxin.append(i)
+    elif i<0:
+        sentimientos_malos_covaxin.append(i)
+    else:
+        sentimientos_neutros_covaxin.append(i)
+
+
+# In[84]:
+
+
+print(len(sentimientos_buenos_covaxin), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_covaxin), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_covaxin), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[152]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_covaxin),len(sentimientos_neutros_covaxin),len(sentimientos_buenos_covaxin)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets Relevantes',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets que hablan de covaxin',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[86]:
+
+
+#palabras mas usadas en india
+text_n=' '.join(india['text'])
+wordcloud = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets neutros", fontsize=15)
+plt.show()
+
+
+# **Tweets con más repercusión.**
+
+# Buscamos aquellos tweets que tienen mayor número de retweets y favoritos, como indicativo de que son los que tienen más repercusión, y nos interesa la valoración de estos, pues será lo que gran parte de la comunidad piense.
+
+# In[87]:
+
+
+media=india['retweets'].mean()
+media2=india['favorites'].mean()
+
+
+# In[88]:
+
+
+favs = india[india["retweets"]>media][india['favorites']>media2]
+
+
+# In[89]:
+
+
+#Analisis de sentimientos de los tweets con más repercusión
+popularity_list_fav = []
+for tweet in favs["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_fav.append(popularity)
+
+
+# In[90]:
+
+
+media_sentimientos = np.mean(popularity_list_fav)
+if media_sentimientos>0:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una buena concepción sobre las vacunas")
+else:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una mala concepción sobre las vacunas")
+
+
+# In[91]:
+
+
+sentimientos_buenos_fav = []
+sentimientos_malos_fav = []
+sentimientos_neutros_fav = []
+for i in popularity_list_fav:
+    if i>0:
+        sentimientos_buenos_fav.append(i)
+    elif i<0:
+        sentimientos_malos_fav.append(i)
+    else:
+        sentimientos_neutros_fav.append(i)
+
+
+# In[92]:
+
+
+print(len(sentimientos_buenos_fav), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_fav), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_fav), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[93]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_fav),len(sentimientos_neutros_fav),len(sentimientos_buenos_fav)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets Relevantes',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets más relevantes',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# **Tweets de usuarios verificados**
+
+# Analizamos si los tweets pertenecen a algun Usuario verificado que consideraremos más relevante.
+
+# In[94]:
+
+
+ver = india[india["user_verified"]==True]
+
+
+# In[95]:
+
+
+print('Hay',ver['user_name'].nunique(),'usuarios verificados de los totales, tweeteando ', ver['Tweet'].shape[0], 'tweets.')
+
+
+# In[96]:
+
+
+#Analisis de sentimientos de los tweets de verificados
+#Analisis de sentimientos 
+popularity_list_ver = []
+for tweet in ver["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_ver.append(popularity)
+
+
+# In[97]:
+
+
+sentimientos_buenos_ver = []
+sentimientos_malos_ver = []
+sentimientos_neutros_ver = []
+for i in popularity_list_ver:
+    if i>0:
+        sentimientos_buenos_ver.append(i)
+    elif i<0:
+        sentimientos_malos_ver.append(i)
+    else:
+        sentimientos_neutros_ver.append(i)
+
+
+# In[98]:
+
+
+print(len(sentimientos_buenos_ver), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_ver), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_ver), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[99]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_ver),len(sentimientos_neutros_ver),len(sentimientos_buenos_ver)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets de usuarios verificados',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[100]:
+
+
+text_n=' '.join(ver['text'])
+wordcloud_ver = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud_ver, interpolation="bilinear")
+plt.title("Palabras más usadas entre los usuarios verificados", fontsize=15)
+plt.show()
+
+
+# **Analizamos los usuarios.**
+
+# In[101]:
+
+
+print('Hay',india['user_name'].nunique(),'usuarios diferentes tweeteando los', india['Tweet'].shape[0], 'tweets totales.')
+
+
+# In[102]:
+
+
+india['user_name'].value_counts()
+
+
+# In[103]:
+
+
+import seaborn as sns
+def plot_count(feature, title, df, size=1, ordered=True):
+    f, ax = plt.subplots(1,1, figsize=(4*size,4))
+    total = float(len(df))
+    if ordered:
+        g = sns.countplot(df[feature], order = df[feature].value_counts().index[:20], palette='Set3')
+    else:
+        g = sns.countplot(df[feature], palette='Set3')
+    g.set_title("Porcentaje de tweets de cada {}".format(title))
+    if(size > 2):
+        plt.xticks(rotation=90, size=8)
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x()+p.get_width()/2.,
+                height,
+                '{:1.2f}%'.format(100*height/total),
+                ha="center") 
+    plt.show() 
+
+
+# In[104]:
+
+
+plot_count("user_name", "usuario", india,4)
+
+
+# In[105]:
+
+
+Business_Standard = india[india['user_name'] == 'Business Standard']
+
+
+# In[106]:
+
+
+Business_Standard['user_followers'].value_counts()
+
+
+# In[107]:
+
+
+Business_Standard['user_description'].value_counts()
+
+
+# In[108]:
+
+
+Business_Standard['user_verified'].value_counts()
+
+
+# In[109]:
+
+
+Business_Standard['user_created'].value_counts()
+
+
+# El usuario con más tweets en la India cuenta con alrededor de 2 millones de seguidores y es una cuenta verificada creada en junio de 2009. Habla sobre noticias de economía, política y tecnología de la India.
+
+# In[110]:
+
+
+text_n=' '.join(Business_Standard['text'])
+wordcloud_bs = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud_bs, interpolation="bilinear")
+plt.title("Palabras más usadas del usuario Business Standard", fontsize=15)
+plt.show()
+
+
+# **Estados Unidos**
+# 
+
+# In[111]:
+
+
+usa=db[db['user_location'].str.contains( 'USA|EEUU')] #Creamos una sub-base que solo incluyan los tweets de Estados Unidos
+
+
+# In[112]:
+
+
+usa.sort_values(["date"]) #Ordenamos por orden cronológico
+
+
+# In[113]:
+
+
+usa['date'] = pd.to_datetime(usa['date']) #Formato fecha
+
+
+# Vemos la cantidad de tweets por meses, para hacernos una idea del interés de la población por la vacunación. 
+
+# In[114]:
+
+
+x_values = usa['date'].dt.strftime('%B').unique()
+y_values = usa.groupby(usa['date'].dt.strftime('%B'),sort=False)['Tweet'].sum()
+plt.bar(x_values, y_values,color=['green','green','green','red','red'])
+plt.xlabel('Meses',fontsize=15)
+plt.ylabel('Número de Tweets',fontsize=15)
+plt.title('Evolución temporal de los tweets sobre la vacunación',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[115]:
+
+
+plt.figure(figsize=(20,5))
+sns.lineplot(data=df_EEUU,x="date",y="daily_vaccinations",marker='s', markersize = 12);
+
+plt.xticks(rotation=90);
+plt.title("Progreso de la vacunación de EE.UU");
+
+
+plt.figure()
+plt.figure(figsize=(20,5))
+sns.lineplot(x=x_values,y=y_values,marker='s', markersize = 12,sort=False, color='black');
+plt.xticks(rotation=90);
+plt.ylabel('Número de tweets', fontsize=15)
+plt.title("Evolución de la cantidad de tweets", fontsize=15);
+
+plt.title('COMPARATIVA ENTRE % DE POBLACIÓN VACUNADA Y TWEETS SOBRE ELLA')
+
+
+# Al igual que en India, hemos hecho también la comparación en EE.UU para ver si guarda relación el progreso de vacunación con el número de tweets de cada mes. Se puede observar que en febrero y marzo hay un aumento coincidiendo con los meses que más tweets hay. 
+# 
+# 
+# Ahora analizamos de qué vacunas se habla más, es decir, cuales generan mayor interés entre la población.
+
+# In[116]:
+
+
+sputnik = usa[usa["text"].str.contains('SputnikV')]
+pf = usa[usa["text"].str.contains('Pfizer|BioNTech')]
+sinopharm = usa[usa["text"].str.contains('Sinopharm')]
+sinovac= usa[usa["text"].str.contains('Sinovac')]
+moderna = usa[usa["text"].str.contains('Moderna')]
+astra = usa[usa["text"].str.contains('AstraZeneca|Oxford')]
+covaxin = usa[usa["text"].str.contains('Covaxin')]
+
+
+# In[117]:
+
+
+vacunas= [sputnik,pf,sinopharm,sinovac,moderna,astra,covaxin]
+
+num=[]
+for i in vacunas:
+    num.append(i.shape[0])
+
+
+# In[118]:
+
+
+vacunas2= ['Sputnik','Pfizer','Sinopharm','Sinovac','Moderna','AstraZeneca','Covaxin']
+plt.pie(num, labels=vacunas2,
+        autopct='%1.1f%%', shadow=True, startangle=90)
+plt.title('Porcentaje de tweets sobre cada vacuna en Estados Unidos', fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[119]:
+
+
+popularity_list_moderna = []
+for tweet in moderna["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_moderna.append(popularity)
+
+
+# In[120]:
+
+
+media2 = np.mean(popularity_list_fav)
+if media2>0:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una buena concepción sobre las vacunas")
+else:
+    print("Hay más tweets, de los que tienen más interacciones, que presentan una mala concepción sobre las vacunas")
+
+
+# In[121]:
+
+
+sentimientos_buenos_moderna = []
+sentimientos_malos_moderna = []
+sentimientos_neutros_moderna = []
+for i in popularity_list_moderna:
+    if i>0:
+        sentimientos_buenos_moderna.append(i)
+    elif i<0:
+        sentimientos_malos_moderna.append(i)
+    else:
+        sentimientos_neutros_moderna.append(i)
+
+
+# In[122]:
+
+
+print(len(sentimientos_buenos_moderna), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_moderna), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_moderna), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[123]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_moderna),len(sentimientos_neutros_moderna),len(sentimientos_buenos_moderna)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets Relevantes',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets que hablan de moderna',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[124]:
+
+
+#palabras mas usadas en EEUU
+text_n=' '.join(usa['text'])
+wordcloud_usa = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud_usa, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets neutros", fontsize=15)
+plt.show()
+
+
+# **Análisis de los tweets con más repercusión** 
+
+# Buscamos aquellos tweets que tienen mayor número de retweets y favoritos, como indicativo de que son los que tienen más repercusión, y nos interesa la valoración de estos, pues será lo que gran parte de la comunidad piense.
+
+# In[125]:
+
+
+media=usa['retweets'].mean()
+media2=usa['favorites'].mean()
+favs = usa[usa["retweets"]>media][usa['favorites']>media2]
+
+
+# In[126]:
+
+
+#Analisis de sentimientos de los tweets con más repercusión
+popularity_list_fav = []
+for tweet in favs["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_fav.append(popularity)
+
+
+# In[127]:
+
+
+sentimientos_buenos_fav = []
+sentimientos_malos_fav = []
+sentimientos_neutros_fav = []
+for i in popularity_list_fav:
+    if i>0:
+        sentimientos_buenos_fav.append(i)
+    elif i<0:
+        sentimientos_malos_fav.append(i)
+    else:
+        sentimientos_neutros_fav.append(i)
+
+
+# In[128]:
+
+
+print(len(sentimientos_buenos_fav), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_fav), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_fav), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[129]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_fav),len(sentimientos_neutros_fav),len(sentimientos_buenos_fav)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets más relevantes',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# **Análisis de tweets de usuarios verificados**
+
+# In[130]:
+
+
+ver_usa = usa[usa["user_verified"]==True]
+
+
+# In[131]:
+
+
+print('Hay',ver_usa['user_name'].nunique(),'usuarios verificados de los totales, tweeteando ', ver_usa['Tweet'].shape[0], 'tweets.')
+
+
+# In[132]:
+
+
+#Analisis de sentimientos de los tweets de verificados
+popularity_list_ver_usa = []
+for tweet in ver_usa["text"]:
+    analysis = TextBlob(tweet)
+    analysis = analysis.sentiment
+    popularity = analysis.polarity
+    popularity_list_ver_usa.append(popularity)
+
+
+# In[133]:
+
+
+sentimientos_buenos_ver_usa = []
+sentimientos_malos_ver_usa = []
+sentimientos_neutros_ver_usa = []
+for i in popularity_list_ver_usa:
+    if i>0:
+        sentimientos_buenos_ver_usa.append(i)
+    elif i<0:
+        sentimientos_malos_ver_usa.append(i)
+    else:
+        sentimientos_neutros_ver_usa.append(i)
+
+
+# In[134]:
+
+
+print(len(sentimientos_buenos_ver_usa), "tweets tienen una opinión positiva sobre la vacunación")
+print(len(sentimientos_malos_ver_usa), "tweets  tienen una opinión negativa sobre la vacunación")
+print(len(sentimientos_neutros_ver_usa), "tweets tienen una opinión neutra sobre la vacunación")
+
+
+# In[135]:
+
+
+x_values = ['Negativos','Neutros','Positivos']
+y_values = [len(sentimientos_malos_ver_usa),len(sentimientos_neutros_ver_usa),len(sentimientos_buenos_ver_usa)]
+plt.bar(x_values, y_values,color=['red','blue','green'])
+plt.xlabel('Valoración',fontsize=15)
+plt.ylabel('Número de Tweets',fontsize=15)
+plt.title('Análisis de sentimientos de los tweets de usuarios verificados',fontsize=15)
+plt.rcParams["figure.figsize"] = (5,5)
+plt.show()
+
+
+# In[136]:
+
+
+text_n=' '.join(ver_usa['text'])
+wordcloud_ver_usa = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud_ver_usa, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets neutros", fontsize=15)
+plt.show()
+
+
+# **Análisis de usuarios**
+
+# In[137]:
+
+
+print('Hay',usa['user_name'].nunique(),'usuarios diferentes tweeteando los', usa['Tweet'].shape[0], 'tweets totales.')
+
+
+# In[138]:
+
+
+usa['user_name'].value_counts()
+
+
+# In[139]:
+
+
+import seaborn as sns
+def plot_count(feature, title, df, size=1, ordered=True):
+    f, ax = plt.subplots(1,1, figsize=(4*size,4))
+    total = float(len(df))
+    if ordered:
+        g = sns.countplot(df[feature], order = df[feature].value_counts().index[:20], palette='Set3')
+    else:
+        g = sns.countplot(df[feature], palette='Set3')
+    g.set_title("Porcentaje de tweets de cada {}".format(title))
+    if(size > 2):
+        plt.xticks(rotation=90, size=8)
+    for p in ax.patches:
+        height = p.get_height()
+        ax.text(p.get_x()+p.get_width()/2.,
+                height,
+                '{:1.2f}%'.format(100*height/total),
+                ha="center") 
+    plt.show() 
+
+
+# In[140]:
+
+
+plot_count("user_name", "usuario", usa,5)
+
+
+# In[141]:
+
+
+Rhombics_Board_Game = usa[usa['user_name'] == 'Rhombics Board Game']
+
+
+# In[142]:
+
+
+Rhombics_Board_Game['user_followers'].value_counts()
+
+
+# In[143]:
+
+
+Rhombics_Board_Game['user_description'].value_counts()
+
+
+# In[144]:
+
+
+Rhombics_Board_Game['user_verified'].value_counts()
+
+
+# In[145]:
+
+
+Rhombics_Board_Game['user_created'].value_counts()
+
+
+# El usuario con más tweets en EE.UU cuenta con alrededor de 50 seguidores creada en agosto de 2013. Habla sobre el diseño de juegos de mesa.
+
+# In[146]:
+
+
+text_n=' '.join(Rhombics_Board_Game['text'])
+wordcloud_us = WordCloud(background_color="white", colormap="Dark2", max_font_size=150, random_state=30).generate(text_n.replace('https://t.co/',''))
+plt.figure(figsize=(8,10))
+plt.imshow(wordcloud_us, interpolation="bilinear")
+plt.title("Palabras más usadas entre los tweets neutros", fontsize=15)
+plt.show()
+
